@@ -1,0 +1,158 @@
+<div class="payment-invoice">
+  <div class="header">
+    <h2>Payment & Invoice Management</h2>
+  </div>
+
+  <!-- Success/Error Messages -->
+  <div class="alert alert-success" *ngIf="successMessage">
+    {{ successMessage }}
+  </div>
+  <div class="alert alert-error" *ngIf="errorMessage">
+    {{ errorMessage }}
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <div class="filter-group">
+      <label for="statusFilter">Filter by Status:</label>
+      <select id="statusFilter" [(ngModel)]="statusFilter" (change)="onStatusFilterChange()" class="form-control">
+        <option value="all">All Statuses</option>
+        <option value="pending">Pending</option>
+        <option value="paid">Paid</option>
+        <option value="overdue">Overdue</option>
+        <option value="cancelled">Cancelled</option>
+        <option value="refunded">Refunded</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label for="patientFilter">Filter by Patient:</label>
+      <input 
+        type="text" 
+        id="patientFilter" 
+        [(ngModel)]="patientFilter" 
+        (input)="onPatientFilterChange()" 
+        placeholder="Search by patient name..."
+        class="form-control"
+      >
+    </div>
+  </div>
+
+  <!-- Invoices List -->
+  <div class="invoices-list">
+    <h3>Invoices ({{ filteredInvoices.length }})</h3>
+    <div class="loading" *ngIf="loading">
+      <p>Loading invoices...</p>
+    </div>
+    <div class="invoices-grid" *ngIf="!loading && filteredInvoices.length > 0; else noInvoices">
+      <div class="invoice-card" *ngFor="let invoice of filteredInvoices" [class.overdue]="isOverdue(invoice)">
+        <div class="invoice-header">
+          <div class="invoice-id">
+            <h4>Invoice #{{ invoice.id }}</h4>
+            <span class="status-badge" [ngClass]="getStatusClass(invoice.status)">
+              {{ getStatusIcon(invoice.status) }} {{ invoice.status }}
+            </span>
+          </div>
+          <div class="invoice-amount">
+            <span class="amount">${{ invoice.amount.toFixed(2) }}</span>
+          </div>
+        </div>
+        
+        <div class="invoice-details">
+          <p><strong>Patient:</strong> {{ invoice.patientName }}</p>
+          <p><strong>Doctor:</strong> {{ invoice.doctorName }}</p>
+          <p><strong>Appointment Date:</strong> {{ invoice.appointmentDateTime | date:'medium' }}</p>
+          <p><strong>Due Date:</strong> {{ invoice.dueDate | date:'mediumDate' }}</p>
+          <p *ngIf="invoice.paidDate"><strong>Paid Date:</strong> {{ invoice.paidDate | date:'medium' }}</p>
+          <p *ngIf="invoice.notes"><strong>Notes:</strong> {{ invoice.notes }}</p>
+        </div>
+        
+        <div class="invoice-actions">
+          <button 
+            class="btn btn-sm btn-primary" 
+            (click)="showPaymentModal(invoice)"
+            *ngIf="invoice.status.toLowerCase() === 'pending'"
+          >
+            Pay Now
+          </button>
+          <button 
+            class="btn btn-sm btn-secondary" 
+            (click)="downloadInvoice(invoice)"
+          >
+            Download Invoice
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #noInvoices>
+      <div class="no-data" *ngIf="!loading">
+        <p>No invoices found matching your criteria.</p>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Payment Modal -->
+  <div class="modal-overlay" *ngIf="showPaymentForm" (click)="cancelPayment()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Process Payment</h3>
+        <button class="close-btn" (click)="cancelPayment()">&times;</button>
+      </div>
+      
+      <div class="modal-body" *ngIf="selectedInvoice">
+        <div class="payment-summary">
+          <h4>Payment Summary</h4>
+          <div class="summary-row">
+            <span>Invoice #{{ selectedInvoice.id }}</span>
+            <span>${{ selectedInvoice.amount.toFixed(2) }}</span>
+          </div>
+          <div class="summary-row">
+            <span>Patient:</span>
+            <span>{{ selectedInvoice.patientName }}</span>
+          </div>
+          <div class="summary-row">
+            <span>Doctor:</span>
+            <span>{{ selectedInvoice.doctorName }}</span>
+          </div>
+          <div class="summary-row total">
+            <span><strong>Total Amount:</strong></span>
+            <span><strong>${{ selectedInvoice.amount.toFixed(2) }}</strong></span>
+          </div>
+        </div>
+
+        <form (ngSubmit)="processPayment()" #paymentForm="ngForm">
+          <div class="form-group">
+            <label for="paymentMethod">Payment Method</label>
+            <select id="paymentMethod" name="paymentMethod" [(ngModel)]="paymentMethod" required class="form-control">
+              <option value="credit_card">Credit Card</option>
+              <option value="debit_card">Debit Card</option>
+              <option value="bank_transfer">Bank Transfer</option>
+              <option value="cash">Cash</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="paymentNotes">Payment Notes (Optional)</label>
+            <textarea 
+              id="paymentNotes" 
+              name="paymentNotes" 
+              [(ngModel)]="paymentNotes" 
+              class="form-control"
+              rows="3"
+              placeholder="Any additional notes for this payment..."
+            ></textarea>
+          </div>
+
+          <div class="modal-actions">
+            <button type="submit" class="btn btn-success" [disabled]="!paymentForm.form.valid">
+              Process Payment
+            </button>
+            <button type="button" class="btn btn-secondary" (click)="cancelPayment()">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

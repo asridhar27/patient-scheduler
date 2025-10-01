@@ -1,0 +1,250 @@
+<div class="bulk-operations">
+  <div class="header">
+    <h2>Bulk Operations</h2>
+    <div class="header-actions">
+      <button class="btn btn-primary" (click)="showBulkForm()" *ngIf="!showForm">
+        New Bulk Operation
+      </button>
+      <div class="auto-refresh-toggle">
+        <label>
+          <input type="checkbox" [(ngModel)]="autoRefresh" (change)="toggleAutoRefresh()">
+          Auto-refresh
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success/Error Messages -->
+  <div class="alert alert-success" *ngIf="successMessage">
+    {{ successMessage }}
+  </div>
+  <div class="alert alert-error" *ngIf="errorMessage">
+    {{ errorMessage }}
+  </div>
+
+  <!-- Bulk Operation Form -->
+  <div class="form-container" *ngIf="showForm">
+    <h3>Create Bulk Operation</h3>
+    <form (ngSubmit)="submitBulkOperation()" #bulkForm="ngForm">
+      
+      <!-- Operation Type Selection -->
+      <div class="form-group">
+        <label for="operationType">Operation Type *</label>
+        <select 
+          id="operationType" 
+          name="operationType" 
+          [(ngModel)]="operationType" 
+          (change)="onOperationTypeChange()"
+          required 
+          class="form-control"
+        >
+          <option value="BulkCancel">Bulk Cancel Appointments</option>
+          <option value="BulkReschedule">Bulk Reschedule Appointments</option>
+          <option value="BulkBillingUpdate">Bulk Billing Update</option>
+        </select>
+      </div>
+
+      <!-- Appointment Selection -->
+      <div class="form-group">
+        <label>Select Appointments *</label>
+        <div class="appointment-selection">
+          <div class="selection-actions">
+            <button type="button" class="btn btn-sm btn-secondary" (click)="selectAllAppointments()">
+              Select All
+            </button>
+            <button type="button" class="btn btn-sm btn-secondary" (click)="deselectAllAppointments()">
+              Deselect All
+            </button>
+            <span class="selection-count">{{ selectedAppointmentIds.length }} selected</span>
+          </div>
+          
+          <div class="appointments-list" *ngIf="appointments.length > 0">
+            <div class="appointment-item" *ngFor="let appointment of appointments">
+              <label class="appointment-checkbox">
+                <input 
+                  type="checkbox" 
+                  [value]="appointment.id"
+                  [checked]="selectedAppointmentIds.includes(appointment.id!)"
+                  (change)="onAppointmentSelectionChange(appointment.id!, $event)"
+                >
+                <div class="appointment-info">
+                  <strong>{{ appointment.patientName }}</strong> - 
+                  Dr. {{ appointment.doctorName }} - 
+                  {{ appointment.appointmentDateTime | date:'medium' }}
+                </div>
+              </label>
+            </div>
+          </div>
+          
+          <div class="no-appointments" *ngIf="appointments.length === 0">
+            <p>No scheduled appointments available for bulk operations.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Operation-specific fields -->
+      <div class="form-group" *ngIf="operationType === 'BulkCancel'">
+        <label for="reason">Cancellation Reason *</label>
+        <input 
+          type="text" 
+          id="reason" 
+          name="reason" 
+          [(ngModel)]="reason" 
+          required 
+          class="form-control"
+          placeholder="Enter reason for cancellation"
+        >
+      </div>
+
+      <div class="form-group" *ngIf="operationType === 'BulkReschedule'">
+        <label for="newDateTime">New Date & Time *</label>
+        <input 
+          type="datetime-local" 
+          id="newDateTime" 
+          name="newDateTime" 
+          [(ngModel)]="newDateTime" 
+          required 
+          class="form-control"
+        >
+      </div>
+
+      <div class="form-group" *ngIf="operationType === 'BulkBillingUpdate'">
+        <label for="billingAdjustment">Billing Adjustment ($)</label>
+        <input 
+          type="number" 
+          id="billingAdjustment" 
+          name="billingAdjustment" 
+          [(ngModel)]="billingAdjustment" 
+          step="0.01"
+          class="form-control"
+          placeholder="Enter amount (positive or negative)"
+        >
+        <small class="form-text">Positive values add to invoice, negative values subtract.</small>
+      </div>
+
+      <div class="form-group">
+        <label for="notes">Notes</label>
+        <textarea 
+          id="notes" 
+          name="notes" 
+          [(ngModel)]="notes" 
+          class="form-control"
+          rows="3"
+          placeholder="Additional notes for this operation..."
+        ></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" [disabled]="!bulkForm.form.valid || selectedAppointmentIds.length === 0 || loading">
+          <span *ngIf="loading">Processing...</span>
+          <span *ngIf="!loading">Queue Bulk Operation</span>
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="cancelForm()">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Jobs List -->
+  <div class="jobs-section" *ngIf="!showForm">
+    <h3>Bulk Operation Jobs</h3>
+    
+    <div class="loading" *ngIf="loading">
+      <p>Loading jobs...</p>
+    </div>
+    
+    <div class="jobs-grid" *ngIf="!loading && jobs.length > 0; else noJobs">
+      <div class="job-card" *ngFor="let job of jobs" [ngClass]="getJobStatusClass(job.status)">
+        <div class="job-header">
+          <h4>Job #{{ job.id }} - {{ getOperationTypeDisplay(job.operationType) }}</h4>
+          <span class="status-badge" [ngClass]="getJobStatusClass(job.status)">
+            {{ job.status }}
+          </span>
+        </div>
+        
+        <div class="job-details">
+          <p><strong>Created:</strong> {{ job.createdAt | date:'medium' }}</p>
+          <p><strong>Total Records:</strong> {{ job.totalRecords }}</p>
+          <p><strong>Processed:</strong> {{ job.processedRecords }}</p>
+          <p><strong>Failed:</strong> {{ job.failedRecords }}</p>
+          
+          <div class="progress-bar" *ngIf="job.status === 'Processing'">
+            <div class="progress-fill" [style.width.%]="getProgressPercentage(job)"></div>
+            <span class="progress-text">{{ getProgressPercentage(job) }}%</span>
+          </div>
+          
+          <p *ngIf="job.startedAt"><strong>Started:</strong> {{ job.startedAt | date:'medium' }}</p>
+          <p *ngIf="job.completedAt"><strong>Completed:</strong> {{ job.completedAt | date:'medium' }}</p>
+          <p *ngIf="job.startedAt && job.completedAt">
+            <strong>Duration:</strong> {{ formatDuration(job.startedAt, job.completedAt) }}
+          </p>
+        </div>
+        
+        <div class="job-actions">
+          <button class="btn btn-sm btn-info" (click)="viewJobDetails(job)">
+            View Details
+          </button>
+          <button 
+            class="btn btn-sm btn-warning" 
+            (click)="cancelJob(job.id)"
+            *ngIf="job.status === 'Queued' || job.status === 'Processing'"
+          >
+            Cancel Job
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #noJobs>
+      <div class="no-data" *ngIf="!loading">
+        <p>No bulk operation jobs found.</p>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Job Details Modal -->
+  <div class="modal-overlay" *ngIf="selectedJob" (click)="closeJobDetails()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Job Details - #{{ selectedJob.id }}</h3>
+        <button class="btn btn-sm btn-secondary" (click)="closeJobDetails()">×</button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="job-detail-section">
+          <h4>Operation Information</h4>
+          <p><strong>Type:</strong> {{ getOperationTypeDisplay(selectedJob.operationType) }}</p>
+          <p><strong>Status:</strong> <span [ngClass]="getJobStatusClass(selectedJob.status)">{{ selectedJob.status }}</span></p>
+          <p><strong>Created:</strong> {{ selectedJob.createdAt | date:'medium' }}</p>
+          <p><strong>Started:</strong> {{ selectedJob.startedAt ? (selectedJob.startedAt | date:'medium') : 'Not started' }}</p>
+          <p><strong>Completed:</strong> {{ selectedJob.completedAt ? (selectedJob.completedAt | date:'medium') : 'Not completed' }}</p>
+        </div>
+        
+        <div class="job-detail-section">
+          <h4>Progress</h4>
+          <p><strong>Total Records:</strong> {{ selectedJob.totalRecords }}</p>
+          <p><strong>Processed:</strong> {{ selectedJob.processedRecords }}</p>
+          <p><strong>Failed:</strong> {{ selectedJob.failedRecords }}</p>
+          <p><strong>Success Rate:</strong> {{ selectedJob.totalRecords > 0 ? getSuccessRate(selectedJob) : 0 }}%</p>
+        </div>
+        
+        <div class="job-detail-section" *ngIf="selectedJob.errors.length > 0">
+          <h4>Errors</h4>
+          <ul class="error-list">
+            <li *ngFor="let error of selectedJob.errors">{{ error }}</li>
+          </ul>
+        </div>
+        
+        <div class="job-detail-section" *ngIf="selectedJob.result">
+          <h4>Result</h4>
+          <pre class="result-json">{{ selectedJob.result | json }}</pre>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeJobDetails()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>

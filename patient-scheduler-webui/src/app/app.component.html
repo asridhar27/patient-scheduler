@@ -1,0 +1,35 @@
+<div class="app-container">
+  <header class="app-header">
+    <div class="header-content">
+      <h1 class="app-title">{{ title }}</h1>
+      <nav class="main-nav">
+        <a routerLink="/patients" routerLinkActive="active" class="nav-link">
+          <span class="nav-icon">👥</span>
+          Patients
+        </a>
+        <a routerLink="/appointments" routerLinkActive="active" class="nav-link">
+          <span class="nav-icon">📅</span>
+          Appointments
+        </a>
+        <a routerLink="/invoices" routerLinkActive="active" class="nav-link">
+          <span class="nav-icon">💰</span>
+          Payments & Invoices
+        </a>
+        <a routerLink="/bulk-operations" routerLinkActive="active" class="nav-link">
+          <span class="nav-icon">⚡</span>
+          Bulk Operations
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <router-outlet></router-outlet>
+  </main>
+
+  <footer class="app-footer">
+    <div class="footer-content">
+      <p>&copy; 2024 Patient Scheduler. Built with Angular and .NET Core.</p>
+    </div>
+  </footer>
+</div>

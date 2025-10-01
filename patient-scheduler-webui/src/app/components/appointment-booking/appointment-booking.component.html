@@ -1,0 +1,168 @@
+<div class="appointment-booking">
+  <div class="header">
+    <h2>Appointment Booking</h2>
+    <button class="btn btn-primary" (click)="showBookingForm()" *ngIf="!showForm">
+      Book New Appointment
+    </button>
+  </div>
+
+  <!-- Success/Error Messages -->
+  <div class="alert alert-success" *ngIf="successMessage">
+    {{ successMessage }}
+  </div>
+  <div class="alert alert-error" *ngIf="errorMessage">
+    {{ errorMessage }}
+  </div>
+
+  <!-- Booking Form -->
+  <div class="form-container" *ngIf="showForm">
+    <h3>Book Appointment</h3>
+    <form (ngSubmit)="bookAppointment()" #appointmentForm="ngForm">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="patientId">Patient *</label>
+          <select 
+            id="patientId" 
+            name="patientId" 
+            [(ngModel)]="newAppointment.patientId" 
+            (change)="onPatientChange()"
+            required 
+            class="form-control"
+          >
+            <option value="0">Select a patient...</option>
+            <option *ngFor="let patient of patients" [value]="patient.id">
+              {{ patient.firstName }} {{ patient.lastName }} ({{ patient.email }})
+            </option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="doctorId">Doctor *</label>
+          <select 
+            id="doctorId" 
+            name="doctorId" 
+            [(ngModel)]="newAppointment.doctorId" 
+            (change)="onDoctorChange()"
+            required 
+            class="form-control"
+          >
+            <option value="0">Select a doctor...</option>
+            <option *ngFor="let doctor of doctors" [value]="doctor.id">
+              Dr. {{ doctor.firstName }} {{ doctor.lastName }} - {{ doctor.specialization }} (${{ doctor.hourlyRate }}/hr)
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="selectedDate">Select Date *</label>
+          <input 
+            type="date" 
+            id="selectedDate" 
+            name="selectedDate" 
+            [(ngModel)]="selectedDate"
+            (change)="onDateChange()"
+            required 
+            class="form-control"
+          >
+        </div>
+        <div class="form-group">
+          <label for="selectedTimeSlot">Select Available Time *</label>
+          <select
+            id="selectedTimeSlot"
+            name="selectedTimeSlot"
+            [(ngModel)]="selectedTimeSlotId"
+            required
+            class="form-control"
+            [disabled]="availableTimeSlots.length === 0"
+          >
+            <option [ngValue]="null">Select a time slot...</option>
+            <option *ngFor="let slot of availableTimeSlots" [ngValue]="slot.id">
+              {{ slot.startTime | date:'shortTime' }} - {{ slot.endTime | date:'shortTime' }}
+            </option>
+          </select>
+          <small class="form-text" *ngIf="availableTimeSlots.length === 0 && selectedDoctor && selectedDate">
+            No available slots for the selected doctor on this date.
+          </small>
+        </div>
+        <div class="available-slots-info" *ngIf="selectedDoctor && selectedDate">
+          <p *ngIf="availableTimeSlots.length > 0">
+            Showing {{ availableTimeSlots.length }} available slot(s) for Dr. {{ selectedDoctor.firstName }} {{ selectedDoctor.lastName }} on {{ selectedDate | date:'fullDate' }}
+          </p>
+          <p *ngIf="availableTimeSlots.length === 0">
+            No available slots for the selected doctor on this date.
+          </p>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="notes">Notes</label>
+        <textarea 
+          id="notes" 
+          name="notes" 
+          [(ngModel)]="newAppointment.notes" 
+          class="form-control"
+          rows="3"
+          placeholder="Any additional notes for the appointment..."
+        ></textarea>
+      </div>
+
+      <!-- Doctor Info Display -->
+      <div class="doctor-info" *ngIf="selectedDoctor">
+        <h4>Selected Doctor Information</h4>
+        <p><strong>Name:</strong> Dr. {{ selectedDoctor.firstName }} {{ selectedDoctor.lastName }}</p>
+        <p><strong>Specialization:</strong> {{ selectedDoctor.specialization }}</p>
+        <p><strong>Hourly Rate:</strong> ${{ selectedDoctor.hourlyRate }}</p>
+        <p><strong>Estimated Cost:</strong> ${{ (selectedDoctor.hourlyRate * parseDuration(newAppointment.duration)).toFixed(2) }}</p>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-success" (click)="bookAppointmentWithBilling()" [disabled]="!appointmentForm.form.valid || !selectedDoctor">
+          Book with Billing
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="!appointmentForm.form.valid">
+          Book Appointment
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="cancelForm()">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Appointments List -->
+  <div class="appointments-list" *ngIf="!showForm">
+    <h3>Current Appointments</h3>
+    <div class="loading" *ngIf="loading">
+      <p>Loading appointments...</p>
+    </div>
+    <div class="appointments-grid" *ngIf="!loading && appointments.length > 0; else noAppointments">
+      <div class="appointment-card" *ngFor="let appointment of appointments">
+        <div class="appointment-info">
+          <div class="appointment-header">
+            <h4>{{ appointment.patientName || 'Patient' }}</h4>
+            <span class="status-badge" [ngClass]="getAppointmentStatusClass(appointment.status || '')">
+              {{ appointment.status || 'Unknown' }}
+            </span>
+          </div>
+          <p><strong>Doctor:</strong> {{ appointment.doctorName || 'Unknown' }}</p>
+          <p><strong>Specialization:</strong> {{ appointment.doctorSpecialization || 'Unknown' }}</p>
+          <p><strong>Date & Time:</strong> {{ appointment.appointmentDateTime }}</p>
+          <p><strong>Duration:</strong> {{ appointment.duration }}</p>
+          <p *ngIf="appointment.notes"><strong>Notes:</strong> {{ appointment.notes }}</p>
+        </div>
+        <div class="appointment-actions" *ngIf="appointment.status === 'Scheduled'">
+          <button class="btn btn-sm btn-warning" (click)="cancelAppointment(appointment)">
+            Cancel Appointment
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #noAppointments>
+      <div class="no-data" *ngIf="!loading">
+        <p>No appointments found. Click "Book New Appointment" to get started.</p>
+      </div>
+    </ng-template>
+  </div>
+</div>

@@ -1,0 +1,99 @@
+### Patient Scheduler API Test Script
+### Run these requests in order to test the complete workflow
+
+### 1. Create a new patient
+POST https://localhost:7000/api/patients
+Content-Type: application/json
+
+{
+  "firstName": "John",
+  "lastName": "Doe",
+  "email": "john.doe@email.com",
+  "phoneNumber": "555-1234",
+  "dateOfBirth": "1990-01-01T00:00:00Z",
+  "address": "123 Main St, Anytown, USA",
+  "medicalHistory": "No known allergies"
+}
+
+### 2. Get all patients
+GET https://localhost:7000/api/patients
+
+### 3. Get all doctors (pre-seeded data)
+GET https://localhost:7000/api/doctors
+
+### 4. Schedule an appointment with automatic billing
+POST https://localhost:7000/api/appointments/schedule-with-billing?amount=150.00&dueDate=2024-02-15T00:00:00Z
+Content-Type: application/json
+
+{
+  "patientId": 1,
+  "doctorId": 1,
+  "appointmentDateTime": "2024-01-15T10:00:00Z",
+  "duration": "01:00:00",
+  "notes": "Regular checkup"
+}
+
+### 5. Get all appointments
+GET https://localhost:7000/api/appointments
+
+### 6. Get all invoices
+GET https://localhost:7000/api/invoices
+
+### 7. Process payment for invoice
+POST https://localhost:7000/api/invoices/1/process-payment
+
+### 8. Test billing failure scenario (high amount)
+POST https://localhost:7000/api/appointments/schedule-with-billing?amount=1500.00&dueDate=2024-02-15T00:00:00Z
+Content-Type: application/json
+
+{
+  "patientId": 1,
+  "doctorId": 2,
+  "appointmentDateTime": "2024-01-16T14:00:00Z",
+  "duration": "01:00:00",
+  "notes": "High-value consultation"
+}
+
+### 9. Cancel appointment with refund
+POST https://localhost:7000/api/appointments/1/cancel-with-refund
+
+### 10. Create a simple appointment without billing
+POST https://localhost:7000/api/appointments
+Content-Type: application/json
+
+{
+  "patientId": 1,
+  "doctorId": 3,
+  "appointmentDateTime": "2024-01-20T09:00:00Z",
+  "duration": "00:30:00",
+  "notes": "Follow-up visit"
+}
+
+### 11. Create an invoice manually
+POST https://localhost:7000/api/invoices
+Content-Type: application/json
+
+{
+  "patientId": 1,
+  "appointmentId": 2,
+  "amount": 75.00,
+  "dueDate": "2024-02-20T00:00:00Z",
+  "notes": "Follow-up consultation fee"
+}
+
+### 12. Update appointment status
+PUT https://localhost:7000/api/appointments/2
+Content-Type: application/json
+
+{
+  "status": "Completed"
+}
+
+### 13. Update invoice
+PUT https://localhost:7000/api/invoices/2
+Content-Type: application/json
+
+{
+  "status": "Paid",
+  "paidDate": "2024-01-20T10:00:00Z"
+}

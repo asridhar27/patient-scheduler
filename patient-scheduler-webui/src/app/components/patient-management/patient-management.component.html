@@ -1,0 +1,173 @@
+<div class="patient-management">
+  <div class="header">
+    <h2>Patient Management</h2>
+    <button class="btn btn-primary" (click)="showAddForm()" *ngIf="!showForm">
+      Add New Patient
+    </button>
+  </div>
+
+  <!-- Success/Error Messages -->
+  <div class="alert alert-success" *ngIf="successMessage">
+    {{ successMessage }}
+  </div>
+  <div class="alert alert-error" *ngIf="errorMessage">
+    {{ errorMessage }}
+  </div>
+
+  <!-- Patient Form -->
+  <div class="form-container" *ngIf="showForm">
+    <h3>{{ editingPatient ? 'Edit Patient' : 'Add New Patient' }}</h3>
+    <form [formGroup]="patientForm" (ngSubmit)="savePatient()">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="firstName">First Name *</label>
+          <input 
+            type="text" 
+            id="firstName" 
+            formControlName="firstName"
+            class="form-control"
+            [class.is-invalid]="firstName?.invalid && firstName?.touched"
+          >
+          <div class="invalid-feedback" *ngIf="firstName?.invalid && firstName?.touched">
+            <div *ngIf="firstName?.errors?.['required']">First name is required</div>
+            <div *ngIf="firstName?.errors?.['minlength']">First name must be at least 2 characters</div>
+            <div *ngIf="firstName?.errors?.['maxlength']">First name cannot exceed 50 characters</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="lastName">Last Name *</label>
+          <input 
+            type="text" 
+            id="lastName" 
+            formControlName="lastName"
+            class="form-control"
+            [class.is-invalid]="lastName?.invalid && lastName?.touched"
+          >
+          <div class="invalid-feedback" *ngIf="lastName?.invalid && lastName?.touched">
+            <div *ngIf="lastName?.errors?.['required']">Last name is required</div>
+            <div *ngIf="lastName?.errors?.['minlength']">Last name must be at least 2 characters</div>
+            <div *ngIf="lastName?.errors?.['maxlength']">Last name cannot exceed 50 characters</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="email">Email *</label>
+          <input 
+            type="email" 
+            id="email" 
+            formControlName="email"
+            class="form-control"
+            [class.is-invalid]="email?.invalid && email?.touched"
+          >
+          <div class="invalid-feedback" *ngIf="email?.invalid && email?.touched">
+            <div *ngIf="email?.errors?.['required']">Email is required</div>
+            <div *ngIf="email?.errors?.['email']">Please enter a valid email address</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="phoneNumber">Phone Number *</label>
+          <input 
+            type="tel" 
+            id="phoneNumber" 
+            formControlName="phoneNumber"
+            class="form-control"
+            [class.is-invalid]="phoneNumber?.invalid && phoneNumber?.touched"
+            placeholder="e.g., +1234567890"
+          >
+          <div class="invalid-feedback" *ngIf="phoneNumber?.invalid && phoneNumber?.touched">
+            <div *ngIf="phoneNumber?.errors?.['required']">Phone number is required</div>
+            <div *ngIf="phoneNumber?.errors?.['pattern']">Please enter a valid phone number</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="dateOfBirth">Date of Birth *</label>
+        <input 
+          type="date" 
+          id="dateOfBirth" 
+          formControlName="dateOfBirth"
+          class="form-control"
+          [class.is-invalid]="dateOfBirth?.invalid && dateOfBirth?.touched"
+        >
+        <div class="invalid-feedback" *ngIf="dateOfBirth?.invalid && dateOfBirth?.touched">
+          <div *ngIf="dateOfBirth?.errors?.['required']">Date of birth is required</div>
+          <div *ngIf="dateOfBirth?.errors?.['futureDate']">Date of birth cannot be in the future</div>
+          <div *ngIf="dateOfBirth?.errors?.['invalidAge']">Please enter a valid age (0-120 years)</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="address">Address</label>
+        <textarea 
+          id="address" 
+          formControlName="address"
+          class="form-control"
+          [class.is-invalid]="address?.invalid && address?.touched"
+          rows="2"
+        ></textarea>
+        <div class="invalid-feedback" *ngIf="address?.invalid && address?.touched">
+          <div *ngIf="address?.errors?.['maxlength']">Address cannot exceed 200 characters</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="medicalHistory">Medical History</label>
+        <textarea 
+          id="medicalHistory" 
+          formControlName="medicalHistory"
+          class="form-control"
+          [class.is-invalid]="medicalHistory?.invalid && medicalHistory?.touched"
+          rows="3"
+        ></textarea>
+        <div class="invalid-feedback" *ngIf="medicalHistory?.invalid && medicalHistory?.touched">
+          <div *ngIf="medicalHistory?.errors?.['maxlength']">Medical history cannot exceed 1000 characters</div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" [disabled]="patientForm.invalid">
+          {{ editingPatient ? 'Update Patient' : 'Create Patient' }}
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="cancelForm()">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Patients List -->
+  <div class="patients-list" *ngIf="!showForm">
+    <div class="loading" *ngIf="loading">
+      <p>Loading patients...</p>
+    </div>
+    <div class="patients-grid" *ngIf="!loading && patients.length > 0; else noPatients">
+      <div class="patient-card" *ngFor="let patient of patients">
+        <div class="patient-info">
+          <h4>{{ patient.firstName }} {{ patient.lastName }}</h4>
+          <p><strong>Email:</strong> {{ patient.email }}</p>
+          <p><strong>Phone:</strong> {{ patient.phoneNumber }}</p>
+          <p><strong>DOB:</strong> {{ patient.dateOfBirth | date:'mediumDate' }}</p>
+          <p *ngIf="patient.address"><strong>Address:</strong> {{ patient.address }}</p>
+          <p *ngIf="patient.medicalHistory"><strong>Medical History:</strong> {{ patient.medicalHistory }}</p>
+        </div>
+        <div class="patient-actions">
+          <button class="btn btn-sm btn-secondary" (click)="showEditForm(patient)">
+            Edit
+          </button>
+          <button class="btn btn-sm btn-danger" (click)="deletePatient(patient)">
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #noPatients>
+      <div class="no-data" *ngIf="!loading">
+        <p>No patients found. Click "Add New Patient" to get started.</p>
+      </div>
+    </ng-template>
+  </div>
+</div>

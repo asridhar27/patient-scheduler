@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "s4/+Y2ipQqAN9PDXgAzzxXZ2eIFuUvCWc3kBI4+etUU=",
+  "Source": "PatientScheduler",
+  "BasePath": "_content/PatientScheduler",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}
